@@ -36,7 +36,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           # Set this to "/your-repo-name" if this repo is NOT named
           # "username.github.io" (i.e. it's a project page, not a user page).
-          BASE_PATH: /openread
+          BASE_PATH: /OpenRead
         run: npm run build
 
       - name: Setup Pages
