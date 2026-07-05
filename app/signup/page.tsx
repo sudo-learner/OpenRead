@@ -64,7 +64,13 @@ export default function SignupPage() {
         </button>
       </form>
       <p className="text-center text-sm text-white/50 mt-6">
-        Already have an account? <a href="/login" className="text-primary">Log in</a>
+        Already have an account? import Link from "next/link";
+
+// ...
+
+<Link href="/login" className="text-primary">
+  Log in
+</Link>
       </p>
     </div>
   );
