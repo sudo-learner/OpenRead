@@ -2,10 +2,14 @@
 
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Document, Page, pdfjs } from "react-pdf";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// react-pdf needs browser-only APIs (DOMMatrix etc.) that don't exist in
+// the Node.js environment Next.js uses to pre-render pages during
+// `next build` with output: 'export'. ssr:false keeps it out of that
+// pre-render pass entirely — it only loads once this runs in the browser.
+const PdfViewer = dynamic(() => import("@/components/PdfViewer"), { ssr: false });
 
 function ReaderContent() {
   const searchParams = useSearchParams();
@@ -102,9 +106,7 @@ function ReaderContent() {
       </div>
 
       <div className="flex justify-center py-8">
-        <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
-          <Page pageNumber={pageNumber} width={700} />
-        </Document>
+        <PdfViewer fileUrl={fileUrl} pageNumber={pageNumber} onLoadSuccess={setNumPages} />
       </div>
 
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 glass px-6 py-3 rounded-xl2">
