@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Hero from "@/components/Hero";
+import Features from "@/components/Features";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -21,11 +22,17 @@ function Row({ title, books }: { title: string; books: Book[] }) {
   );
 }
 
+const SECTION_KEYS = [
+  "trending", "popular", "recent",
+  "selfImprovement", "motivation",
+  "cyber", "hacking", "programming",
+] as const;
+
 export default function HomePage() {
   const supabase = createClient();
-  const [sections, setSections] = useState<Record<string, Book[]>>({
-    trending: [], popular: [], recent: [], cyber: [], hacking: [], programming: [],
-  });
+  const [sections, setSections] = useState<Record<string, Book[]>>(
+    Object.fromEntries(SECTION_KEYS.map((k) => [k, []])) as Record<string, Book[]>
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,16 +49,19 @@ export default function HomePage() {
         return data ?? [];
       }
 
-      const [trending, popular, recent, cyber, hacking, programming] = await Promise.all([
-        getSection("view_count"),
-        getSection("download_count"),
-        getSection("created_at"),
-        getSection("created_at", "Cybersecurity"),
-        getSection("created_at", "Ethical Hacking"),
-        getSection("created_at", "Programming"),
-      ]);
+      const [trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming] =
+        await Promise.all([
+          getSection("view_count"),
+          getSection("download_count"),
+          getSection("created_at"),
+          getSection("created_at", "Self Improvement"),
+          getSection("created_at", "Motivation"),
+          getSection("created_at", "Cybersecurity"),
+          getSection("created_at", "Ethical Hacking"),
+          getSection("created_at", "Programming"),
+        ]);
 
-      setSections({ trending, popular, recent, cyber, hacking, programming });
+      setSections({ trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming });
       setLoading(false);
     }
     load();
@@ -60,6 +70,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <Features />
       {loading ? (
         <p className="text-center py-10 text-white/40">Loading books...</p>
       ) : (
@@ -67,6 +78,8 @@ export default function HomePage() {
           <Row title="Trending Books" books={sections.trending} />
           <Row title="Popular Books" books={sections.popular} />
           <Row title="Recently Added" books={sections.recent} />
+          <Row title="Self Improvement Collection" books={sections.selfImprovement} />
+          <Row title="Motivation Collection" books={sections.motivation} />
           <Row title="Cybersecurity Collection" books={sections.cyber} />
           <Row title="Ethical Hacking Collection" books={sections.hacking} />
           <Row title="Programming Collection" books={sections.programming} />

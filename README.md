@@ -10,8 +10,17 @@ builds and publishes it automatically every time you push to `main`.
 - Cyber-themed homepage with Trending / Popular / Recently Added / category rows
 - Simple email + password login and sign-up (Supabase Auth)
 - Category browser (`/categories/?slug=Cybersecurity`)
+- Global search (`/search/?q=...`) across title, author, and category
 - Book upload (PDF/EPUB + cover) with admin-approval workflow
 - PDF reader (`/reader/?id=...`) with page navigation, dark/sepia/light modes, reading-progress sync
+- **Text-to-Speech** — reads the current page aloud using the browser's built-in
+  voice (no API key, no cost — this is the free Web Speech API every modern
+  browser ships with)
+- **Bookmarks** — save any page, jump back to it later
+- **Notes & Highlights** — select text in the reader to save it as a highlight,
+  or jot a free-form note tied to the current page
+- **Reviews & Ratings** — 1–5 star rating plus a comment, one per user per book,
+  with a live average shown at the top
 - Dashboard: continue reading, stats, your uploads
 - Full Postgres schema with Row Level Security (RLS) for every table
 - A GitHub Actions workflow that builds and deploys the site on every push
@@ -26,13 +35,29 @@ login state in the browser and redirect if needed. That's a UX convenience
 only; the actual security boundary is Supabase's Row Level Security, which
 applies no matter how someone reaches your data.
 
+## Starter catalog: Self Improvement & Motivation
+`supabase/seed_books.sql` adds 10 real book listings (title, author, a short
+original description) to those two categories, so your homepage isn't empty.
+All ten are genuine public-domain classics. They ship as **listings only** —
+no actual PDF file is attached, since file uploads have to go through your
+own Supabase storage, which I can't reach from here. Clicking one in the
+reader shows a friendly "file not uploaded yet" message until you attach the
+real file yourself: download it free from Project Gutenberg (or another
+public-domain source) and upload it through your own `/upload` page. Full
+instructions are in the comments at the top of that SQL file.
+
+Run it the same way as `schema.sql` — Supabase → SQL Editor → paste → Run —
+any time after the main schema is in place.
+
 ## Not yet built (roadmap — add these next, one at a time)
 - EPUB reader (use `epub.js` the same way `react-pdf` is used here)
-- Notes / highlights / bookmarks UI (tables already exist in `supabase/schema.sql`)
-- Reviews, ratings, reading lists, follow system (tables already exist)
+- Reading lists, follow system (tables already exist in `supabase/schema.sql`)
 - Admin panel (approve/reject uploads — query `books` where `status = 'pending'`)
-- Global search page — use Postgres full-text search on `books`
-- Notifications, reading streaks/goals, text-to-speech, dictionary/translate
+- Notifications, reading streaks/goals
+- Dictionary / translate on selected text
+- Table of contents / jump-to-chapter, keyboard shortcuts, touch gestures
+- AI features (recommendations, chat, summaries) — needs its own design decision;
+  see the note in chat about what to build first
 
 Build these the same way you built EasyToLearn in stages — one feature, tested, then the next.
 

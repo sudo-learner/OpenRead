@@ -149,9 +149,33 @@ create policy "Follows are public" on public.follows for select using (true);
 create policy "Users manage their own follows" on public.follows for all using (auth.uid() = follower_id);
 
 -- ========== STORAGE BUCKETS ==========
--- Run these once, or create via Dashboard > Storage:
+-- Create these via Dashboard > Storage > New bucket (mark both "Public"),
+-- or run:
 -- insert into storage.buckets (id, name, public) values ('books', 'books', true);
 -- insert into storage.buckets (id, name, public) values ('covers', 'covers', true);
+
+-- Marking a bucket "Public" only controls READ access via public URLs.
+-- Uploading (INSERT) still goes through Row Level Security on
+-- storage.objects, which has no policies by default — so uploads fail
+-- with "new row violates row-level security policy" until you add these:
+
+create policy "Authenticated users can upload to books bucket"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'books');
+
+create policy "Authenticated users can upload to covers bucket"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'covers');
+
+create policy "Anyone can read books bucket files"
+on storage.objects for select
+using (bucket_id = 'books');
+
+create policy "Anyone can read covers bucket files"
+on storage.objects for select
+using (bucket_id = 'covers');
 
 -- ========== AUTO-CREATE PROFILE ON SIGNUP ==========
 create function public.handle_new_user()

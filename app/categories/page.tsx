@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -39,7 +40,7 @@ function CategoryContent() {
     <div className="px-6 py-10">
       <div className="flex flex-wrap gap-2 mb-8">
         {CATEGORIES.map((c) => (
-          <a
+          <Link
             key={c}
             href={`/categories/?slug=${encodeURIComponent(c)}`}
             className={`text-xs px-3 py-1.5 rounded-lg border ${
@@ -47,7 +48,7 @@ function CategoryContent() {
             }`}
           >
             {c}
-          </a>
+          </Link>
         ))}
       </div>
 
