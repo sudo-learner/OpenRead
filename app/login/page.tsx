@@ -54,7 +54,13 @@ export default function LoginPage() {
       </form>
 
       <p className="text-center text-sm text-white/50 mt-6">
-        No account? <a href="/signup" className="text-primary">Sign up</a>
+        No account? import Link from "next/link";
+
+// ...
+
+<Link href="/signup" className="text-primary">
+  Sign up
+</Link>
       </p>
     </div>
   );
