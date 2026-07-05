@@ -1,0 +1,76 @@
+"use client";
+
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import BookCard from "@/components/BookCard";
+import { createClient } from "@/lib/supabase/client";
+
+const CATEGORIES = [
+  "Cybersecurity", "Ethical Hacking", "Programming", "Operating Systems",
+  "Networking", "Linux", "Web Development", "Artificial Intelligence",
+  "Machine Learning", "Communication Skills", "Self Improvement",
+  "Motivation", "Entrepreneurship", "Science", "Mathematics",
+  "Engineering", "History", "Fiction", "Novels", "Exam Preparation",
+];
+
+function CategoryContent() {
+  const supabase = createClient();
+  const searchParams = useSearchParams();
+  const category = searchParams.get("slug") || CATEGORIES[0];
+  const [books, setBooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from("books")
+        .select("id, title, author, cover_url, category")
+        .eq("status", "approved")
+        .eq("category", category)
+        .order("created_at", { ascending: false });
+      setBooks(data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, [category]);
+
+  return (
+    <div className="px-6 py-10">
+      <div className="flex flex-wrap gap-2 mb-8">
+        {CATEGORIES.map((c) => (
+          <a
+            key={c}
+            href={`/categories/?slug=${encodeURIComponent(c)}`}
+            className={`text-xs px-3 py-1.5 rounded-lg border ${
+              c === category ? "border-primary text-primary" : "border-white/10 text-white/60"
+            }`}
+          >
+            {c}
+          </a>
+        ))}
+      </div>
+
+      <h1 className="text-3xl font-bold mb-8">{category}</h1>
+      {loading ? (
+        <p className="text-white/40">Loading...</p>
+      ) : books.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+          {books.map((b) => (
+            <BookCard key={b.id} book={b} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-white/50">No books in this category yet.</p>
+      )}
+    </div>
+  );
+}
+
+export default function CategoryPage() {
+  return (
+    <Suspense fallback={<p className="text-center py-20 text-white/40">Loading...</p>}>
+      <CategoryContent />
+    </Suspense>
+  );
+}
