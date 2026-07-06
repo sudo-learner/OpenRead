@@ -10,12 +10,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export default function PdfViewer({
   fileUrl,
   pageNumber,
+  width,
   onLoadSuccess,
   onError,
   onPageTextReady,
 }: {
   fileUrl: string;
   pageNumber: number;
+  width: number;
   onLoadSuccess: (numPages: number) => void;
   onError: () => void;
   // Called with the plain text of the currently rendered page, once react-pdf
@@ -44,7 +46,7 @@ export default function PdfViewer({
       >
         <Page
           pageNumber={pageNumber}
-          width={700}
+          width={width}
           renderTextLayer={true}
           renderAnnotationLayer={false}
           onRenderTextLayerSuccess={handleTextLayerReady}

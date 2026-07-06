@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +18,8 @@ function ReaderContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const supabase = createClient();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageAreaRef = useRef<HTMLDivElement>(null);
 
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -33,6 +35,53 @@ function ReaderContent() {
   const [dictDefinition, setDictDefinition] = useState<string | null>(null);
   const [dictLoading, setDictLoading] = useState(false);
   const [jumpInput, setJumpInput] = useState("");
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fitToScreen, setFitToScreen] = useState(false);
+  const [pageWidth, setPageWidth] = useState(700);
+
+  // Full screen: uses the browser's native Fullscreen API on the whole
+  // reader container. Works the same on a static export — no server involved.
+  function toggleFullscreen() {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  useEffect(() => {
+    function handleFsChange() {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  // Fit Screen: recompute the PDF page width to match the available space
+  // instead of a fixed 700px — this is what fixes "very long book pages"
+  // on smaller screens or when a book has a tall/large page size.
+  useEffect(() => {
+    if (!fitToScreen) return;
+    function recompute() {
+      if (!pageAreaRef.current) return;
+      const available = pageAreaRef.current.clientWidth - 32; // small side padding
+      setPageWidth(Math.max(280, Math.min(available, 1100)));
+    }
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [fitToScreen, isFullscreen]);
+
+  function toggleFitScreen() {
+    if (fitToScreen) {
+      setFitToScreen(false);
+      setPageWidth(700);
+    } else {
+      setFitToScreen(true);
+    }
+  }
 
   // Keyboard shortcuts: ← / → change page, Esc closes any open panel.
   useEffect(() => {
@@ -177,7 +226,7 @@ function ReaderContent() {
   }
 
   return (
-    <div className={`min-h-screen ${themeClasses[theme]} transition-colors`}>
+    <div ref={containerRef} className={`min-h-screen ${themeClasses[theme]} transition-colors`}>
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-white/10 sticky top-0 bg-inherit z-10">
         <div className="flex gap-2 text-sm">
           {(["dark", "sepia", "light"] as const).map((t) => (
@@ -189,6 +238,19 @@ function ReaderContent() {
               {t}
             </button>
           ))}
+          <button
+            onClick={toggleFitScreen}
+            className={`px-3 py-1 rounded-lg border ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
+            title="Resize the page to fit your screen width"
+          >
+            ⤢ Fit Screen
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className={`px-3 py-1 rounded-lg border ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
+          >
+            {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
+          </button>
         </div>
 
         <TextToSpeech text={pageText} />
@@ -230,10 +292,11 @@ function ReaderContent() {
         </div>
       )}
 
-      <div className="flex justify-center py-8" onMouseUp={handleMouseUp}>
+      <div ref={pageAreaRef} className="flex justify-center py-8" onMouseUp={handleMouseUp}>
         <PdfViewer
           fileUrl={fileUrl}
           pageNumber={pageNumber}
+          width={pageWidth}
           onLoadSuccess={setNumPages}
           onError={() => setFileError(true)}
           onPageTextReady={setPageText}

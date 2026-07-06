@@ -47,8 +47,7 @@ export default function Navbar() {
       </Link>
       <nav className="hidden md:flex gap-6 text-sm text-white/80">
         <Link href="/" className="hover:text-primary">Home</Link>
-        <Link href="/categories/?slug=Cybersecurity" className="hover:text-primary">Categories</Link>
-        <Link href="/search" className="hover:text-primary">Search</Link>
+        <Link href="/categories/?slug=All" className="hover:text-primary">Categories</Link>
         <Link href="/dashboard" className="hover:text-primary">Dashboard</Link>
         <Link href="/lists" className="hover:text-primary">My Lists</Link>
         <Link href="/upload" className="hover:text-primary">Upload</Link>

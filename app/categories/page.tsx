@@ -7,6 +7,7 @@ import BookCard from "@/components/BookCard";
 import { createClient } from "@/lib/supabase/client";
 
 const CATEGORIES = [
+  "All",
   "Cybersecurity", "Ethical Hacking", "Programming", "Operating Systems",
   "Networking", "Linux", "Web Development", "Artificial Intelligence",
   "Machine Learning", "Communication Skills", "Self Improvement",
@@ -24,12 +25,13 @@ function CategoryContent() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from("books")
         .select("id, title, author, cover_url, category")
         .eq("status", "approved")
-        .eq("category", category)
         .order("created_at", { ascending: false });
+      if (category !== "All") query = query.eq("category", category);
+      const { data } = await query;
       setBooks(data ?? []);
       setLoading(false);
     }
