@@ -39,6 +39,7 @@ function ReaderContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
   const [pageWidth, setPageWidth] = useState(700);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   // Full screen: uses the browser's native Fullscreen API on the whole
   // reader container. Works the same on a static export — no server involved.
@@ -168,6 +169,29 @@ function ReaderContent() {
     }
   }
 
+  // Swipe gestures: swipe left -> next page, swipe right -> previous page.
+  // Vertical scrolling is left completely alone — we only act when the
+  // horizontal movement clearly dominates, so a normal up/down scroll
+  // never gets mistaken for a page turn.
+  function handleTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const deltaX = t.clientX - touchStart.current.x;
+    const deltaY = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+
+    const SWIPE_THRESHOLD = 50;
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0) changePage(1); // swiped left -> next
+      else changePage(-1); // swiped right -> previous
+    }
+  }
+
   async function lookupDictionary() {
     const word = selectedText.trim().split(/\s+/)[0]?.replace(/[^a-zA-Z'-]/g, "");
     if (!word) return;
@@ -226,7 +250,12 @@ function ReaderContent() {
   }
 
   return (
-    <div ref={containerRef} className={`min-h-screen ${themeClasses[theme]} transition-colors`}>
+    <div
+      ref={containerRef}
+      className={`${themeClasses[theme]} transition-colors ${
+        isFullscreen ? "h-screen overflow-y-auto" : "min-h-screen"
+      }`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-white/10 sticky top-0 bg-inherit z-10">
         <div className="flex gap-2 text-sm">
           {(["dark", "sepia", "light"] as const).map((t) => (
@@ -292,7 +321,13 @@ function ReaderContent() {
         </div>
       )}
 
-      <div ref={pageAreaRef} className="flex justify-center py-8" onMouseUp={handleMouseUp}>
+      <div
+        ref={pageAreaRef}
+        className="flex justify-center py-8 pb-28"
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <PdfViewer
           fileUrl={fileUrl}
           pageNumber={pageNumber}
