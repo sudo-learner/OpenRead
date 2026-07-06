@@ -15,6 +15,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalBooks: 0, pending: 0, approved: 0, rejected: 0, totalUsers: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAccess() {
@@ -40,26 +41,35 @@ export default function AdminPage() {
 
   async function loadTab() {
     setLoading(true);
+    setError(null);
     if (tab === "pending" || tab === "all") {
+      // Note: intentionally NOT joining profiles(username) here — that
+      // embed depends on PostgREST correctly resolving the books->profiles
+      // foreign key, which can silently fail in some project configs and
+      // make the whole query return nothing with no visible error.
       let query = supabase
         .from("books")
-        .select("id, title, author, category, status, created_at, profiles(username)")
+        .select("id, title, author, category, status, created_at, uploaded_by")
         .order("created_at", { ascending: false });
       if (tab === "pending") query = query.eq("status", "pending");
-      const { data } = await query;
+      const { data, error: err } = await query;
+      if (err) setError(err.message);
       setBooks(data ?? []);
     } else if (tab === "users") {
-      const { data } = await supabase.from("profiles").select("id, username, role, created_at").order("created_at", { ascending: false });
+      const { data, error: err } = await supabase.from("profiles").select("id, username, role, created_at").order("created_at", { ascending: false });
+      if (err) setError(err.message);
       setUsers(data ?? []);
     } else if (tab === "stats") {
-      const [{ count: totalBooks }, { count: pending }, { count: approved }, { count: rejected }, { count: totalUsers }] =
-        await Promise.all([
-          supabase.from("books").select("*", { count: "exact", head: true }),
-          supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "pending"),
-          supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "approved"),
-          supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "rejected"),
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
-        ]);
+      const results = await Promise.all([
+        supabase.from("books").select("*", { count: "exact", head: true }),
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "approved"),
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("status", "rejected"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+      ]);
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) setError(firstError.message);
+      const [{ count: totalBooks }, { count: pending }, { count: approved }, { count: rejected }, { count: totalUsers }] = results;
       setStats({
         totalBooks: totalBooks ?? 0,
         pending: pending ?? 0,
@@ -110,6 +120,12 @@ export default function AdminPage() {
         ))}
       </div>
 
+      {error && (
+        <div className="mb-6 px-4 py-3 rounded-xl2 border border-danger/40 bg-danger/10 text-danger text-sm">
+          Error loading data: {error}
+        </div>
+      )}
+
       {loading ? (
         <p className="text-white/40">Loading...</p>
       ) : tab === "stats" ? (
@@ -145,7 +161,7 @@ export default function AdminPage() {
               <div>
                 <p className="font-medium">{b.title}</p>
                 <p className="text-xs text-white/50">
-                  {b.author} · {b.category} · uploaded by {b.profiles?.username ?? "unknown"}
+                  {b.author} · {b.category}
                 </p>
               </div>
               <div className="flex items-center gap-2">
