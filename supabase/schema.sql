@@ -143,6 +143,18 @@ create policy "Users manage their own lists" on public.reading_lists for all usi
 create policy "List items follow list visibility" on public.reading_list_items for select using (
   exists (select 1 from public.reading_lists l where l.id = list_id and (l.is_public or l.user_id = auth.uid()))
 );
+create policy "Users manage items in their own lists" on public.reading_list_items for insert with check (
+  exists (select 1 from public.reading_lists l where l.id = list_id and l.user_id = auth.uid())
+);
+create policy "Users remove items from their own lists" on public.reading_list_items for delete using (
+  exists (select 1 from public.reading_lists l where l.id = list_id and l.user_id = auth.uid())
+);
+
+-- Admins can promote/demote other users' roles (regular users can still
+-- only update their own profile, per the policy above).
+create policy "Admins can update any profile" on public.profiles for update using (
+  exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+);
 
 -- Follows: public
 create policy "Follows are public" on public.follows for select using (true);

@@ -30,6 +30,25 @@ function ReaderContent() {
   const [selectedText, setSelectedText] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [dictDefinition, setDictDefinition] = useState<string | null>(null);
+  const [dictLoading, setDictLoading] = useState(false);
+  const [jumpInput, setJumpInput] = useState("");
+
+  // Keyboard shortcuts: ← / → change page, Esc closes any open panel.
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight") changePage(1);
+      if (e.key === "ArrowLeft") changePage(-1);
+      if (e.key === "Escape") {
+        setPanelOpen(false);
+        setReviewsOpen(false);
+        setDictDefinition(null);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [pageNumber, numPages]);
 
   useEffect(() => {
     if (!id) return;
@@ -94,7 +113,49 @@ function ReaderContent() {
 
   function handleMouseUp() {
     const selection = window.getSelection()?.toString().trim() ?? "";
-    if (selection.length > 0) setSelectedText(selection);
+    if (selection.length > 0) {
+      setSelectedText(selection);
+      setDictDefinition(null);
+    }
+  }
+
+  async function lookupDictionary() {
+    const word = selectedText.trim().split(/\s+/)[0]?.replace(/[^a-zA-Z'-]/g, "");
+    if (!word) return;
+    setDictLoading(true);
+    setDictDefinition(null);
+    try {
+      // Free, no-key public dictionary API — safe to call directly from
+      // the browser (unlike a generative-AI API key, this one is meant
+      // to be used client-side with no secret to protect).
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+      if (!res.ok) throw new Error("not found");
+      const data = await res.json();
+      const def = data[0]?.meanings?.[0]?.definitions?.[0]?.definition;
+      setDictDefinition(def || "No definition found.");
+    } catch {
+      setDictDefinition("No definition found for that word.");
+    } finally {
+      setDictLoading(false);
+    }
+  }
+
+  function openTranslate() {
+    // Real machine translation needs either a paid API or a key-holding
+    // backend server to call it safely — neither fits a key-free static
+    // site. Opening Google Translate in a new tab with the text pre-filled
+    // gets the same result for the reader without exposing any secret.
+    const url = `https://translate.google.com/?sl=auto&tl=hi&text=${encodeURIComponent(selectedText)}&op=translate`;
+    window.open(url, "_blank");
+  }
+
+  function handleJumpSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const page = parseInt(jumpInput);
+    if (page >= 1 && page <= (numPages || page)) {
+      jumpToPage(page);
+      setJumpInput("");
+    }
   }
 
   const themeClasses = {
@@ -139,11 +200,35 @@ function ReaderContent() {
           <button onClick={() => setPanelOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
             🔖 Notes
           </button>
+          <form onSubmit={handleJumpSubmit} className="flex items-center gap-1">
+            <input
+              value={jumpInput}
+              onChange={(e) => setJumpInput(e.target.value)}
+              placeholder="Go to page"
+              className="w-24 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs"
+            />
+          </form>
           <span>
             Page {pageNumber} / {numPages || "?"} · {numPages ? Math.round((pageNumber / numPages) * 100) : 0}%
           </span>
         </div>
       </div>
+
+      {selectedText && (
+        <div className="flex flex-wrap items-center gap-3 px-6 py-2 border-b border-white/10 bg-black/20 text-sm">
+          <span className="text-white/50 italic truncate max-w-xs">&ldquo;{selectedText}&rdquo;</span>
+          <button onClick={lookupDictionary} className="px-3 py-1 rounded-lg border border-secondary/40 text-secondary hover:bg-secondary/10">
+            {dictLoading ? "Looking up..." : "📖 Dictionary"}
+          </button>
+          <button onClick={openTranslate} className="px-3 py-1 rounded-lg border border-accent/40 text-accent hover:bg-accent/10">
+            🌐 Translate
+          </button>
+          <button onClick={() => setPanelOpen(true)} className="px-3 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10">
+            ✏️ Save as note
+          </button>
+          {dictDefinition && <span className="text-white/70 w-full">{dictDefinition}</span>}
+        </div>
+      )}
 
       <div className="flex justify-center py-8" onMouseUp={handleMouseUp}>
         <PdfViewer

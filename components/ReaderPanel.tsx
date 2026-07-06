@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-type Tab = "bookmarks" | "notes";
+type Tab = "bookmarks" | "notes" | "lists";
 
 export default function ReaderPanel({
   bookId,
@@ -25,6 +26,8 @@ export default function ReaderPanel({
   const [notes, setNotes] = useState<any[]>([]);
   const [noteText, setNoteText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [lists, setLists] = useState<any[]>([]);
+  const [listMembership, setListMembership] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function load() {
@@ -34,16 +37,34 @@ export default function ReaderPanel({
         setLoading(false);
         return;
       }
-      const [{ data: bm }, { data: nt }] = await Promise.all([
+      const [{ data: bm }, { data: nt }, { data: userLists }, { data: memberships }] = await Promise.all([
         supabase.from("bookmarks").select("*").eq("user_id", user.id).eq("book_id", bookId).order("page"),
         supabase.from("notes").select("*").eq("user_id", user.id).eq("book_id", bookId).order("created_at", { ascending: false }),
+        supabase.from("reading_lists").select("id, name").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("reading_list_items").select("list_id").eq("book_id", bookId),
       ]);
       setBookmarks(bm ?? []);
       setNotes(nt ?? []);
+      setLists(userLists ?? []);
+      setListMembership(new Set((memberships ?? []).map((m: any) => m.list_id)));
       setLoading(false);
     }
     load();
   }, [bookId]);
+
+  async function toggleListMembership(listId: string) {
+    if (listMembership.has(listId)) {
+      await supabase.from("reading_list_items").delete().eq("list_id", listId).eq("book_id", bookId);
+      setListMembership((prev) => {
+        const next = new Set(prev);
+        next.delete(listId);
+        return next;
+      });
+    } else {
+      await supabase.from("reading_list_items").insert({ list_id: listId, book_id: bookId });
+      setListMembership((prev) => new Set(prev).add(listId));
+    }
+  }
 
   async function addBookmark() {
     if (!userId) return;
@@ -103,6 +124,12 @@ export default function ReaderPanel({
           >
             Notes & Highlights
           </button>
+          <button
+            onClick={() => setTab("lists")}
+            className={`px-3 py-1 rounded-lg ${tab === "lists" ? "bg-primary text-black" : "text-white/60"}`}
+          >
+            Lists
+          </button>
         </div>
         <button onClick={onClose} className="text-white/50 hover:text-white">✕</button>
       </div>
@@ -137,7 +164,7 @@ export default function ReaderPanel({
               </div>
             )}
           </>
-        ) : (
+        ) : tab === "notes" ? (
           <>
             {selectedText && (
               <div className="mb-4 glass rounded-lg p-3">
@@ -181,6 +208,28 @@ export default function ReaderPanel({
                     </div>
                     <p className="text-white/80">{n.selected_text || n.note_text}</p>
                   </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {lists.length === 0 ? (
+              <p className="text-white/40 text-sm">
+                You don't have any reading lists yet. Create one from the{" "}
+                <Link href="/lists" className="text-primary underline">Reading Lists</Link> page, then come back here to add this book.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {lists.map((l) => (
+                  <label key={l.id} className="flex items-center justify-between glass rounded-lg px-3 py-2 text-sm cursor-pointer">
+                    <span>{l.name}</span>
+                    <input
+                      type="checkbox"
+                      checked={listMembership.has(l.id)}
+                      onChange={() => toggleListMembership(l.id)}
+                    />
+                  </label>
                 ))}
               </div>
             )}
