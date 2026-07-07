@@ -33,6 +33,9 @@ builds and publishes it automatically every time you push to `main`.
 - **Admin Panel** (`/admin`, admins only) — approve/reject pending uploads,
   view all books, promote/demote other users to admin, see site-wide stats
 - Dashboard: continue reading, stats, your uploads
+- **Installable as an app** — has a real web app manifest and icons, so
+  desktop and mobile browsers offer to "install" it like a native app
+  (see the dedicated section below for exact steps)
 - Full Postgres schema with Row Level Security (RLS) for every table
 - A GitHub Actions workflow that builds and deploys the site on every push
 
@@ -46,6 +49,36 @@ check login state (and role, for admin) in the browser and redirect if
 needed. That's a UX convenience only; the actual security boundary is
 Supabase's Row Level Security, which applies no matter how someone reaches
 your data.
+
+## Install as an App (desktop and mobile)
+Once your site is live at `https://sudo-learner.github.io/OpenRead/`, it works
+as a real installable app — no app store, no separate download.
+
+**On a computer (Chrome / Edge):**
+1. Open your live site in the browser
+2. Look for an install icon (⊕ or a small monitor icon) at the right end of
+   the address bar — or open the browser's ⋮ menu and look for "Install OpenRead..."
+3. Click it → OpenRead opens in its own window from then on, with a desktop/taskbar icon and no browser address bar
+
+**On Android (Chrome):**
+1. Open your live site
+2. Tap the ⋮ menu → **"Add to Home screen"** or **"Install app"**
+3. It now sits on your home screen and opens full-screen like any app
+
+**On iPhone/iPad (Safari — this one's different, iOS doesn't support the same install prompt):**
+1. Open your live site in Safari specifically (not Chrome)
+2. Tap the Share icon (square with an arrow) → **"Add to Home Screen"**
+3. It'll appear as an icon that opens full-screen, no Safari bar
+
+If the desktop/Android install option doesn't appear, it usually means the
+site hasn't redeployed with the manifest/icon files yet — check the
+**Actions** tab shows a green run after your latest push, then hard-refresh
+(Ctrl+Shift+R) the live site.
+
+**Note if you ever rename the repo:** `public/manifest.json` has `/OpenRead/`
+hardcoded into a few paths (this file isn't processed by the build the way
+your code is, so it can't auto-adjust to `BASE_PATH` like everything else
+does). If you rename the repo, update those paths in `manifest.json` to match.
 
 ## Making yourself an admin
 Nobody is an admin by default. After signing up, run this once in Supabase →
