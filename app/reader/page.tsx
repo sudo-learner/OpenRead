@@ -35,6 +35,7 @@ function ReaderContent() {
   const [dictDefinition, setDictDefinition] = useState<string | null>(null);
   const [dictLoading, setDictLoading] = useState(false);
   const [jumpInput, setJumpInput] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
@@ -166,6 +167,19 @@ function ReaderContent() {
     if (selection.length > 0) {
       setSelectedText(selection);
       setDictDefinition(null);
+      setCopyFeedback(false);
+    }
+  }
+
+  async function copySelectedText() {
+    try {
+      await navigator.clipboard.writeText(selectedText);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch {
+      // Clipboard API can fail on http:// or unsupported browsers — the
+      // text is still selected, so the person can still use Ctrl/Cmd+C.
+      setCopyFeedback(false);
     }
   }
 
@@ -179,6 +193,17 @@ function ReaderContent() {
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
+    // If the person was actually selecting text (long-press + drag), don't
+    // also treat that same gesture as a page-turn swipe.
+    const selection = window.getSelection()?.toString().trim() ?? "";
+    if (selection.length > 0) {
+      setSelectedText(selection);
+      setDictDefinition(null);
+      setCopyFeedback(false);
+      touchStart.current = null;
+      return;
+    }
+
     if (!touchStart.current) return;
     const t = e.changedTouches[0];
     const deltaX = t.clientX - touchStart.current.x;
@@ -308,6 +333,9 @@ function ReaderContent() {
       {selectedText && (
         <div className="flex flex-wrap items-center gap-3 px-6 py-2 border-b border-white/10 bg-black/20 text-sm">
           <span className="text-white/50 italic truncate max-w-xs">&ldquo;{selectedText}&rdquo;</span>
+          <button onClick={copySelectedText} className="px-3 py-1 rounded-lg border border-white/20 hover:bg-white/5">
+            {copyFeedback ? "✅ Copied!" : "📋 Copy"}
+          </button>
           <button onClick={lookupDictionary} className="px-3 py-1 rounded-lg border border-secondary/40 text-secondary hover:bg-secondary/10">
             {dictLoading ? "Looking up..." : "📖 Dictionary"}
           </button>

@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/TextLayer.css";
 
 // Runs only in the browser (this file is loaded with ssr:false), so it's
 // safe to touch browser-only APIs here — this would crash a Node.js build.
