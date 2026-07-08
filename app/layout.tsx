@@ -27,7 +27,7 @@ export const metadata = {
       type: "image/png",
     },
   ],
-}
+},
 icons: {
   icon: [
     {
