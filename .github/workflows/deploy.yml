@@ -37,6 +37,9 @@ jobs:
           # Set this to "/your-repo-name" if this repo is NOT named
           # "username.github.io" (i.e. it's a project page, not a user page).
           BASE_PATH: /OpenRead
+          # Same value, but exposed to client-side code (used to register
+          # the service worker at the correct path).
+          NEXT_PUBLIC_BASE_PATH: /OpenRead
         run: npm run build
 
       - name: Setup Pages

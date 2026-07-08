@@ -75,6 +75,14 @@ site hasn't redeployed with the manifest/icon files yet — check the
 **Actions** tab shows a green run after your latest push, then hard-refresh
 (Ctrl+Shift+R) the live site.
 
+### Still no install option? Check these in order
+
+1. **Confirm this update actually deployed.** Actions tab → latest run → green ✅. If it's not there yet, push first.
+2. **Hard refresh** the live site (Ctrl+Shift+R / Cmd+Shift+R) — browsers cache manifests aggressively.
+3. **Check the manifest is actually reachable:** open `https://sudo-learner.github.io/OpenRead/manifest.json` directly in a new tab. You should see raw JSON. A 404 here means something's misconfigured — tell me what you see.
+4. **Check what Chrome itself thinks is wrong:** open DevTools (F12) → **Application** tab → **Manifest** (left sidebar). Chrome lists any installability errors directly here — this is the most reliable way to see the real reason. Screenshot this panel and send it to me if the install option still doesn't show; it'll tell us exactly what's missing instead of guessing.
+5. **Where the install button lives varies by browser/OS** — sometimes it's a ⊕ icon directly in the address bar, sometimes it's tucked under the ⋮ menu as "Install OpenRead..." or "Cast, save, and share" → "Install page as app". If you don't see it in either spot but the Manifest panel in step 4 shows no errors, it should still install via ⋮ menu → "Save and share" → "Install page as app" (naming varies by Chrome version).
+
 **Note if you ever rename the repo:** `public/manifest.json` has `/OpenRead/`
 hardcoded into a few paths (this file isn't processed by the build the way
 your code is, so it can't auto-adjust to `BASE_PATH` like everything else
