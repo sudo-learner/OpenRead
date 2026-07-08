@@ -5,7 +5,7 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 export const metadata = {
   title: "OpenRead — Read Anything, Anywhere",
   description: "A free online book reading platform.",
-  manifest: "/manifest.json",
+  manifest: "/OpenRead/manifest.json",
   themeColor: "#0A0A0A",
   icons: {
     icon: [
