@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import { motion, AnimatePresence } from "framer-motion";
 import "react-pdf/dist/Page/TextLayer.css";
 
 // Runs only in the browser (this file is loaded with ssr:false), so it's
@@ -12,6 +13,7 @@ export default function PdfViewer({
   fileUrl,
   pageNumber,
   width,
+  turnDirection = 1,
   onLoadSuccess,
   onError,
   onPageTextReady,
@@ -19,6 +21,9 @@ export default function PdfViewer({
   fileUrl: string;
   pageNumber: number;
   width: number;
+  // 1 = moving forward (next page), -1 = moving backward (previous page).
+  // Only affects which way the flip animation appears to turn.
+  turnDirection?: 1 | -1;
   onLoadSuccess: (numPages: number) => void;
   onError: () => void;
   // Called with the plain text of the currently rendered page, once react-pdf
@@ -39,20 +44,41 @@ export default function PdfViewer({
   }
 
   return (
-    <div ref={containerRef}>
-      <Document
-        file={fileUrl}
-        onLoadSuccess={({ numPages }) => onLoadSuccess(numPages)}
-        onLoadError={onError}
-      >
-        <Page
-          pageNumber={pageNumber}
-          width={width}
-          renderTextLayer={true}
-          renderAnnotationLayer={false}
-          onRenderTextLayerSuccess={handleTextLayerReady}
-        />
-      </Document>
-    </div>
+    // <Document> is deliberately OUTSIDE the animated/keyed element below —
+    // it holds the parsed PDF file. If it remounted on every page turn,
+    // the whole file would re-download and re-parse every time you flip a
+    // page, causing a lag spike instead of a smooth animation. Only the
+    // individual <Page> swaps, which is cheap since the file is already loaded.
+    <Document
+      file={fileUrl}
+      onLoadSuccess={({ numPages }) => onLoadSuccess(numPages)}
+      onLoadError={onError}
+    >
+      <div style={{ perspective: 1800 }}>
+        <AnimatePresence initial={false} custom={turnDirection} mode="popLayout">
+          <motion.div
+            key={pageNumber}
+            ref={containerRef}
+            custom={turnDirection}
+            initial={(dir: 1 | -1) => ({ rotateY: dir > 0 ? 65 : -65, opacity: 0 })}
+            animate={{ rotateY: 0, opacity: 1 }}
+            exit={(dir: 1 | -1) => ({ rotateY: dir > 0 ? -65 : 65, opacity: 0 })}
+            transition={{ duration: 0.32, ease: "easeInOut" }}
+            style={{
+              transformStyle: "preserve-3d",
+              transformOrigin: turnDirection > 0 ? "left center" : "right center",
+            }}
+          >
+            <Page
+              pageNumber={pageNumber}
+              width={width}
+              renderTextLayer={true}
+              renderAnnotationLayer={false}
+              onRenderTextLayerSuccess={handleTextLayerReady}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </Document>
   );
 }

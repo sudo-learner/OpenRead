@@ -36,6 +36,7 @@ function ReaderContent() {
   const [dictLoading, setDictLoading] = useState(false);
   const [jumpInput, setJumpInput] = useState("");
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [turnDirection, setTurnDirection] = useState<1 | -1>(1);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
@@ -151,12 +152,15 @@ function ReaderContent() {
 
   function changePage(delta: number) {
     const next = Math.min(Math.max(pageNumber + delta, 1), numPages || 1);
+    if (next === pageNumber) return;
+    setTurnDirection(delta > 0 ? 1 : -1);
     setPageNumber(next);
     setSelectedText("");
     saveProgress(next);
   }
 
   function jumpToPage(page: number) {
+    setTurnDirection(page > pageNumber ? 1 : -1);
     setPageNumber(page);
     setSelectedText("");
     saveProgress(page);
@@ -360,6 +364,7 @@ function ReaderContent() {
           fileUrl={fileUrl}
           pageNumber={pageNumber}
           width={pageWidth}
+          turnDirection={turnDirection}
           onLoadSuccess={setNumPages}
           onError={() => setFileError(true)}
           onPageTextReady={setPageText}
