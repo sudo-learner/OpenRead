@@ -55,14 +55,13 @@ export default function PdfViewer({
       onLoadError={onError}
     >
       <div style={{ perspective: 1800 }}>
-        <AnimatePresence initial={false} custom={turnDirection} mode="popLayout">
+        <AnimatePresence initial={false} mode="popLayout">
           <motion.div
             key={pageNumber}
             ref={containerRef}
-            custom={turnDirection}
-            initial={(dir: 1 | -1) => ({ rotateY: dir > 0 ? 65 : -65, opacity: 0 })}
+            initial={{ rotateY: turnDirection > 0 ? 65 : -65, opacity: 0 }}
             animate={{ rotateY: 0, opacity: 1 }}
-            exit={(dir: 1 | -1) => ({ rotateY: dir > 0 ? -65 : 65, opacity: 0 })}
+            exit={{ rotateY: turnDirection > 0 ? -65 : 65, opacity: 0 }}
             transition={{ duration: 0.32, ease: "easeInOut" }}
             style={{
               transformStyle: "preserve-3d",
