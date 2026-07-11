@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 16px;
+}
+
+/* Tailwind sizes almost everything in rem (text, padding, gaps, rounded
+   corners, even fixed widths like w-40) — so bumping the root font-size
+   on small screens makes the whole UI feel bigger and more comfortable
+   to read/tap, without having to touch every component individually. */
+@media (max-width: 640px) {
+  html {
+    font-size: 19px;
+  }
+}
+
 body {
   background-color: #0A0A0A;
   color: #ffffff;
