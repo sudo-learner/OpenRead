@@ -41,7 +41,15 @@ function ReaderContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fitToScreen, setFitToScreen] = useState(false);
   const [pageWidth, setPageWidth] = useState(700);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  // On phones, default to Fit Screen so the page fills the actual screen
+  // width right away instead of showing a fixed desktop-sized page that
+  // needs manual zooming/scrolling sideways to read.
+  useEffect(() => {
+    if (window.innerWidth < 768) setFitToScreen(true);
+  }, []);
 
   // Full screen: uses the browser's native Fullscreen API on the whole
   // reader container. Works the same on a static export — no server involved.
@@ -96,6 +104,7 @@ function ReaderContent() {
         setPanelOpen(false);
         setReviewsOpen(false);
         setDictDefinition(null);
+        setMoreMenuOpen(false);
       }
     }
     window.addEventListener("keydown", handleKey);
@@ -285,53 +294,108 @@ function ReaderContent() {
         isFullscreen ? "h-screen overflow-y-auto" : "min-h-screen"
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-white/10 sticky top-0 bg-inherit z-10">
-        <div className="flex gap-2 text-sm">
-          {(["dark", "sepia", "light"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={`px-3 py-1 rounded-lg border ${theme === t ? "border-primary text-primary" : "border-white/20"}`}
-            >
-              {t}
-            </button>
-          ))}
-          <button
-            onClick={toggleFitScreen}
-            className={`px-3 py-1 rounded-lg border ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
-            title="Resize the page to fit your screen width"
-          >
-            ⤢ Fit Screen
-          </button>
-          <button
-            onClick={toggleFullscreen}
-            className={`px-3 py-1 rounded-lg border ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
-          >
-            {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
-          </button>
-        </div>
-
-        <TextToSpeech text={pageText} />
-
-        <div className="flex items-center gap-2 text-sm">
-          <button onClick={() => setReviewsOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
-            ⭐ Reviews
-          </button>
-          <button onClick={() => setPanelOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
-            🔖 Notes
-          </button>
-          <form onSubmit={handleJumpSubmit} className="flex items-center gap-1">
-            <input
-              value={jumpInput}
-              onChange={(e) => setJumpInput(e.target.value)}
-              placeholder="Go to page"
-              className="w-24 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs"
-            />
-          </form>
-          <span>
+      <div className="border-b border-white/10 sticky top-0 bg-inherit z-10">
+        {/* Slim bar: always visible, works on any screen size */}
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <span className="text-sm text-white/70 shrink-0">
             Page {pageNumber} / {numPages || "?"} · {numPages ? Math.round((pageNumber / numPages) * 100) : 0}%
           </span>
+
+          {/* Full controls inline on larger screens */}
+          <div className="hidden md:flex items-center gap-2 text-sm flex-wrap">
+            {(["dark", "sepia", "light"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                className={`px-3 py-1 rounded-lg border ${theme === t ? "border-primary text-primary" : "border-white/20"}`}
+              >
+                {t}
+              </button>
+            ))}
+            <button
+              onClick={toggleFitScreen}
+              className={`px-3 py-1 rounded-lg border ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
+              title="Resize the page to fit your screen width"
+            >
+              ⤢ Fit Screen
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className={`px-3 py-1 rounded-lg border ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
+            >
+              {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
+            </button>
+            <TextToSpeech text={pageText} />
+            <button onClick={() => setReviewsOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
+              ⭐ Reviews
+            </button>
+            <button onClick={() => setPanelOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
+              🔖 Notes
+            </button>
+            <form onSubmit={handleJumpSubmit}>
+              <input
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value)}
+                placeholder="Go to page"
+                className="w-24 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs"
+              />
+            </form>
+          </div>
+
+          {/* 3-dot menu — mobile only, keeps the reading area uncluttered */}
+          <button
+            onClick={() => setMoreMenuOpen((v) => !v)}
+            className="md:hidden w-9 h-9 shrink-0 rounded-lg border border-white/20 flex items-center justify-center text-lg"
+            aria-label="More options"
+          >
+            ⋮
+          </button>
         </div>
+
+        {/* Mobile dropdown with every secondary control */}
+        {moreMenuOpen && (
+          <div className="md:hidden px-4 pb-4 flex flex-col gap-3 text-sm border-t border-white/10 pt-3">
+            <div className="flex gap-2">
+              {(["dark", "sepia", "light"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTheme(t)}
+                  className={`flex-1 px-3 py-2 rounded-lg border ${theme === t ? "border-primary text-primary" : "border-white/20"}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={toggleFitScreen}
+              className={`px-3 py-2 rounded-lg border text-left ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
+            >
+              ⤢ Fit Screen {fitToScreen ? "(on)" : "(off)"}
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className={`px-3 py-2 rounded-lg border text-left ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
+            >
+              {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
+            </button>
+            <TextToSpeech text={pageText} />
+            <button onClick={() => { setReviewsOpen(true); setMoreMenuOpen(false); }} className="px-3 py-2 rounded-lg border border-white/20 text-left">
+              ⭐ Reviews
+            </button>
+            <button onClick={() => { setPanelOpen(true); setMoreMenuOpen(false); }} className="px-3 py-2 rounded-lg border border-white/20 text-left">
+              🔖 Bookmarks &amp; Notes
+            </button>
+            <form onSubmit={handleJumpSubmit} className="flex gap-2">
+              <input
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value)}
+                placeholder="Go to page number"
+                className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
+              />
+              <button className="px-3 py-2 rounded-lg border border-white/20">Go</button>
+            </form>
+          </div>
+        )}
       </div>
 
       {selectedText && (
