@@ -39,17 +39,33 @@ function ReaderContent() {
   const [turnDirection, setTurnDirection] = useState<1 | -1>(1);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fitToScreen, setFitToScreen] = useState(false);
   const [pageWidth, setPageWidth] = useState(700);
+  const [aspectRatio, setAspectRatio] = useState(0.75); // width/height guess until the real page loads
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  // On phones, default to Fit Screen so the page fills the actual screen
-  // width right away instead of showing a fixed desktop-sized page that
-  // needs manual zooming/scrolling sideways to read.
+  // Always fit the page to the screen automatically — both across AND
+  // down, using the book's real aspect ratio once known — so the whole
+  // page is visible without scrolling or pressing any button. This is
+  // recomputed whenever the available space changes (resize, entering/
+  // exiting full screen) or once we learn the real page proportions.
   useEffect(() => {
-    if (window.innerWidth < 768) setFitToScreen(true);
-  }, []);
+    function recompute() {
+      if (!pageAreaRef.current) return;
+      const availableWidth = pageAreaRef.current.clientWidth - 32;
+      const availableHeight = pageAreaRef.current.clientHeight - 32;
+      const widthIfLimitedByHeight = availableHeight * aspectRatio;
+      const finalWidth = Math.min(availableWidth, widthIfLimitedByHeight);
+      setPageWidth(Math.max(240, Math.min(finalWidth, 1400)));
+    }
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [aspectRatio, isFullscreen]);
+
+  function handlePageDimensions(w: number, h: number) {
+    setAspectRatio(w / h);
+  }
 
   // Full screen: uses the browser's native Fullscreen API on the whole
   // reader container. Works the same on a static export — no server involved.
@@ -69,30 +85,6 @@ function ReaderContent() {
     document.addEventListener("fullscreenchange", handleFsChange);
     return () => document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
-
-  // Fit Screen: recompute the PDF page width to match the available space
-  // instead of a fixed 700px — this is what fixes "very long book pages"
-  // on smaller screens or when a book has a tall/large page size.
-  useEffect(() => {
-    if (!fitToScreen) return;
-    function recompute() {
-      if (!pageAreaRef.current) return;
-      const available = pageAreaRef.current.clientWidth - 32; // small side padding
-      setPageWidth(Math.max(280, Math.min(available, 1100)));
-    }
-    recompute();
-    window.addEventListener("resize", recompute);
-    return () => window.removeEventListener("resize", recompute);
-  }, [fitToScreen, isFullscreen]);
-
-  function toggleFitScreen() {
-    if (fitToScreen) {
-      setFitToScreen(false);
-      setPageWidth(700);
-    } else {
-      setFitToScreen(true);
-    }
-  }
 
   // Keyboard shortcuts: ← / → change page, Esc closes any open panel.
   useEffect(() => {
@@ -290,9 +282,7 @@ function ReaderContent() {
   return (
     <div
       ref={containerRef}
-      className={`${themeClasses[theme]} transition-colors ${
-        isFullscreen ? "h-screen overflow-y-auto" : "min-h-screen"
-      }`}
+      className={`flex flex-col h-screen ${themeClasses[theme]} transition-colors`}
     >
       <div className="border-b border-white/10 sticky top-0 bg-inherit z-10">
         {/* Slim bar: always visible, works on any screen size */}
@@ -312,13 +302,6 @@ function ReaderContent() {
                 {t}
               </button>
             ))}
-            <button
-              onClick={toggleFitScreen}
-              className={`px-3 py-1 rounded-lg border ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
-              title="Resize the page to fit your screen width"
-            >
-              ⤢ Fit Screen
-            </button>
             <button
               onClick={toggleFullscreen}
               className={`px-3 py-1 rounded-lg border ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
@@ -367,12 +350,6 @@ function ReaderContent() {
               ))}
             </div>
             <button
-              onClick={toggleFitScreen}
-              className={`px-3 py-2 rounded-lg border text-left ${fitToScreen ? "border-primary text-primary" : "border-white/20"}`}
-            >
-              ⤢ Fit Screen {fitToScreen ? "(on)" : "(off)"}
-            </button>
-            <button
               onClick={toggleFullscreen}
               className={`px-3 py-2 rounded-lg border text-left ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
             >
@@ -419,7 +396,7 @@ function ReaderContent() {
 
       <div
         ref={pageAreaRef}
-        className="flex justify-center py-8 pb-28"
+        className="flex-1 flex items-center justify-center overflow-auto px-4 py-4"
         onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -432,11 +409,12 @@ function ReaderContent() {
           onLoadSuccess={setNumPages}
           onError={() => setFileError(true)}
           onPageTextReady={setPageText}
+          onPageDimensions={handlePageDimensions}
         />
       </div>
 
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-4 glass px-6 py-3 rounded-xl2">
-        <button onClick={() => changePage(-1)} className="px-4 py-2 rounded-lg bg-white/10">
+      <div className="shrink-0 flex justify-center gap-4 py-3">
+        <button onClick={() => changePage(-1)} className="px-4 py-2 rounded-lg glass">
           ← Prev
         </button>
         <button onClick={() => changePage(1)} className="px-4 py-2 rounded-lg bg-primary text-black font-semibold">

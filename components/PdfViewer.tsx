@@ -17,6 +17,7 @@ export default function PdfViewer({
   onLoadSuccess,
   onError,
   onPageTextReady,
+  onPageDimensions,
 }: {
   fileUrl: string;
   pageNumber: number;
@@ -30,6 +31,11 @@ export default function PdfViewer({
   // has drawn its (invisible, selectable) text layer over the page image.
   // Used for Text-to-Speech and for reading the user's text selection.
   onPageTextReady?: (text: string) => void;
+  // Called with the page's natural width/height (in PDF points) once known,
+  // so the reader can size the page to fit the screen both across AND
+  // down — not just fit the width, which can still leave a tall page
+  // taller than the screen and needing a scroll to see the rest.
+  onPageDimensions?: (width: number, height: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +47,16 @@ export default function PdfViewer({
     // We read it back out here to feed the speech synthesizer.
     const layer = containerRef.current.querySelector(".react-pdf__Page__textContent");
     if (layer) onPageTextReady(layer.textContent || "");
+  }
+
+  function handlePageLoadSuccess(page: any) {
+    if (!onPageDimensions) return;
+    // pdf.js's page proxy exposes the natural page box via .view =
+    // [x0, y0, x1, y1] in PDF points — read defensively since exact
+    // property names can vary slightly across pdf.js versions.
+    const w = page?.originalWidth ?? (page?.view ? page.view[2] - page.view[0] : null);
+    const h = page?.originalHeight ?? (page?.view ? page.view[3] - page.view[1] : null);
+    if (w && h) onPageDimensions(w, h);
   }
 
   return (
@@ -73,6 +89,7 @@ export default function PdfViewer({
               width={width}
               renderTextLayer={true}
               renderAnnotationLayer={false}
+              onLoadSuccess={handlePageLoadSuccess}
               onRenderTextLayerSuccess={handleTextLayerReady}
             />
           </motion.div>
